@@ -1,10 +1,10 @@
 %define __check_files  %{nil}
-%define afsvers 1.5
+%define afsvers 1.6
 
 Summary: OpenAFS firstboot scripts
 Name: openafs-firstboot
 Version: %{afsvers}
-Release: 1.SL
+Release: 1.sl6
 License: GPL 
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Packager: Connie Sieh <csieh@fnal.gov>, Troy Dawson <dawson@fnal.gov> 
@@ -71,6 +71,9 @@ install -p -m 755 $RPM_SOURCE_DIR/openafs-firstboot.png $RPM_BUILD_ROOT/usr/shar
 /usr/share/firstboot/pixmaps/openafs.png
 
 %changelog
+* Thu Feb 10 2011 Troy Dawson <dawson@fnal.gov> - 1.6-1.SL
+- Changed the script to work with SL6
+
 * Mon Apr 02 2007 Troy Dawson <dawson@fnal.gov> - 1.4-1.SL
 - Change copyright to license
 - Added ThisCell.PSI
