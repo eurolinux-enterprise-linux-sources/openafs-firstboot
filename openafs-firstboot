@@ -1,0 +1,163 @@
+from gtk import *
+import string
+import gtk
+import gobject
+import sys
+import os
+import functions
+
+##
+## I18N
+## 
+import gettext
+gettext.bindtextdomain ("firstboot", "/usr/share/locale")
+gettext.textdomain ("firstboot")
+_=gettext.gettext
+
+class childWindow:
+    #You must specify a runPriority for the order in which you wish your module to run
+    runPriority = 35
+    moduleName = (_("OpenAFS"))
+
+    def launch(self, doDebug = None):
+      testrpm = os.system("rpm -q openafs-thiscell > /dev/null 2>&1")
+      if testrpm == 0:
+	return None, None, None
+      else:
+
+        if doDebug:
+            print "initializing openafs module"
+
+        self.vbox = gtk.VBox()
+        self.vbox.set_size_request(400, 200)
+
+        msg = (_("OpenAFS"))
+
+        title_pix = functions.imageFromFile("openafs.png")
+
+        internalVBox = gtk.VBox()
+        internalVBox.set_border_width(10)
+
+        label = gtk.Label(_("This is the OpenAFS configuration Window.\n"
+                          "There are many AFS cells that you might want to bind to."))
+
+        label.set_line_wrap(gtk.TRUE)
+        label.set_alignment(0.0, 0.5)
+        label.set_size_request(600, -1)
+        internalVBox.pack_start(label, FALSE, TRUE)
+
+        label = gtk.Label(_("\n"
+                          "Some of the most common AFS cells are\n"
+                          "\n"
+                          "Cell Name   Lab Site\n"
+                          "========  ======\n"
+                          "anl.gov      Argonne\n"
+                          "cern.ch      CERN\n"
+                          "desy.de     DESY\n"
+                          "fnal.gov     Fermilab\n"
+                          "\n"))
+
+        label.set_line_wrap(gtk.TRUE)
+        label.set_alignment(0.0, 0.5)
+        label.set_size_request(600, -1)
+        internalVBox.pack_start(label, FALSE, TRUE)
+	
+	f=open('/usr/vice/etc/ThisCell')
+	oldcellname = f.readline()
+	f.close()
+        oldcellname = string.strip(oldcellname)
+	
+        table = gtk.Table(1, 2)
+	label = gtk.Label(_("AFS Cell:"))
+        self.afscellEntry = gtk.Entry()
+        self.afscellEntry.set_text(oldcellname)
+        table.attach(label, 0, 1, 0, 1, gtk.FILL)
+        table.attach(self.afscellEntry, 1, 2, 0, 1, gtk.SHRINK, gtk.FILL, 5, 5)
+        internalVBox.pack_start(table, gtk.TRUE, 15)
+
+	self.afsCheckButton = gtk.CheckButton(_("_Start AFS on startup"))
+	self.afsCheckButton.set_active(gtk.TRUE)
+        a = gtk.Alignment(0, 2)
+        a.add(self.afsCheckButton)
+	internalVBox.pack_start(a, gtk.FALSE)
+	
+        label = gtk.Label(_("\n"
+                          "Please Note:\n"
+                          "If you have your firewall turned on, AFS might not work properly.\n"
+                          "You may need to either turn your firewall off, or poke the appropriate holes.\n"
+                          "\n"))
+
+        label.set_line_wrap(gtk.TRUE)
+        label.set_alignment(0.0, 0.5)
+        label.set_size_request(600, -1)
+        internalVBox.pack_start(label, FALSE, TRUE)
+
+        self.vbox.pack_start(internalVBox, gtk.FALSE, 5)
+            
+        return self.vbox, title_pix, msg
+
+    def apply(self, notebook):
+        newcellname = self.afscellEntry.get_text()
+        newcellname = string.strip(newcellname)
+	
+	if newcellname == "":
+            dlg = gtk.MessageDialog(None, 0, gtk.MESSAGE_WARNING, gtk.BUTTONS_NONE,
+                                    (_("It is highly recommended that a AFS cell be set. "
+                                       "AFS cannot start without a cell being set.")))
+
+            dlg.set_position(gtk.WIN_POS_CENTER)
+            dlg.set_modal(gtk.TRUE)
+
+            dlg.add_button(_("Continue"), 0)
+            b = dlg.add_button(_("Add AFS Cell"), 1)
+            b.grab_focus()
+
+            rc = dlg.run()
+            dlg.destroy()
+
+            if rc == 0:
+                return 0
+            else:
+                self.afscellEntry.grab_focus()
+                return None
+	
+	f=open('/usr/vice/etc/ThisCell' , 'w')
+	f.write("%s\n" % newcellname)
+	f.close()
+	
+	AFSStartup = self.afsCheckButton.get_active()
+	if AFSStartup == gtk.TRUE:
+		os.system('/sbin/chkconfig --level 345 afs on')
+	else:
+		os.system('/sbin/chkconfig --level 345 afs off')
+	
+	TestCell = os.system('T=`cat /usr/vice/etc/ThisCell` ; grep -w -q -s \>$T /usr/vice/etc/CellServDB')
+	if TestCell != 0:
+            os.system('echo no > /tmp/testfile')
+            dlg = gtk.MessageDialog(None, 0, gtk.MESSAGE_WARNING, gtk.BUTTONS_NONE,
+                                    (_("Your AFS cell is not found in the AFS list of cells.  "
+                                       "AFS cannot start without a cell being set.  " 
+                                       "If you continue AFS will not be started.")))
+
+            dlg.set_position(gtk.WIN_POS_CENTER)
+            dlg.set_modal(gtk.TRUE)
+
+            dlg.add_button(_("Continue"), 0)
+            b = dlg.add_button(_("Change AFS Cell"), 1)
+            b.grab_focus()
+
+            rc = dlg.run()
+            dlg.destroy()
+
+            if rc == 0:
+                os.system('/sbin/chkconfig --level 345 afs off')
+		return 0
+            else:
+                self.afscellEntry.grab_focus()
+                return None
+
+	if newcellname != "openafs.org":
+		os.system('/etc/init.d/afs start')
+
+	
+        return 0
